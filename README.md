@@ -8,8 +8,13 @@ Free unlimited file hosting using Discord
 git clone https://github.com/hoangvu12/discord-storage
 cd discord-storage
 yarn install
-yarn dev
 ```
+
+## Start the server
+
+1. Create `.env` file, paste in your discord webhook url (look `.env.example` for example).
+2. Run `yarn dev` for development or `yarn start` to start the server (or use npm)
+3. Your server is up running on port 3000
 
 ## Result
 
