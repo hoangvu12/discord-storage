@@ -12,7 +12,10 @@ app.use(
     limits: { fileSize: 8 * 1024 * 1024 },
   })
 );
+
 app.use(cors());
+
+app.use(express.urlencoded({ extended: true }));
 
 const uploadToDiscord = async (file) => {
   const discordWebhookUrl = process.env.DISCORD_WEBHOOK_URL;
@@ -41,24 +44,56 @@ const uploadToDiscord = async (file) => {
   return data?.attachments;
 };
 
+const urlToFile = async (url) => {
+  const filename = url
+    .substring(url.lastIndexOf("/") + 1)
+    .replace(/((\?|#).*)?$/, "");
+
+  const response = await axios.get(url, { responseType: "arraybuffer" });
+  const buffer = Buffer.from(response.data, "utf-8");
+
+  return {
+    name: filename,
+    data: buffer,
+  };
+};
+
+const urlsToFiles = async (url) => {
+  if (Array.isArray(url)) {
+    const promises = url.map((url) => urlToFile(url));
+
+    return Promise.all(promises);
+  }
+
+  return urlToFile(url);
+};
+
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });
 
 app.post("/upload", async (req, res) => {
   try {
-    if (!req.files?.file) {
+    if (!req.files?.file && !req.body?.url) {
       res.statusCode = 400;
 
       res.json({
         success: false,
-        error: "Please specify files",
+        error: "Please specify files or urls",
       });
 
       return;
     }
 
-    const attachments = await uploadToDiscord(req.files.file);
+    let attachments = [];
+
+    if (req.files?.file) {
+      attachments = await uploadToDiscord(req.files.file);
+    } else {
+      const files = await urlsToFiles(req.body.url);
+
+      attachments = await uploadToDiscord(files);
+    }
 
     res.json({
       success: true,
